@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LifeQuest — завантажити</title>
+<meta name="description" content="LifeQuest — прокачуй своє життя. Завантаж для Android або встанови на iPhone.">
+<meta name="theme-color" content="#111312">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #111312; --panel: #1b1f2e; --line: #2c3350; --text: #f4f6fc; --muted: #aab3cf; --blue: #4b66aa; --yellow: #ffd23f; --pink: #ff8fbf; --green: #91f5b6; }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { background: var(--bg); color: var(--text); font-family: 'Rubik', system-ui, sans-serif; }
+  body { min-height: 100vh; min-height: 100dvh; overflow-x: hidden; }
+  .glow { position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background: radial-gradient(600px 420px at 12% 8%, #3d548e66, transparent 70%), radial-gradient(520px 420px at 92% 18%, #6b3fa055, transparent 70%),
+      radial-gradient(700px 500px at 60% 110%, #c2306d33, transparent 70%); }
+  main { position: relative; z-index: 1; width: min(960px, 100%); margin: 0 auto;
+    padding: max(32px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(40px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+  header { display: flex; align-items: center; gap: 18px; margin-top: 12px; }
+  header img { width: 84px; height: 84px; border-radius: 22px; box-shadow: 0 16px 40px #00000080; }
+  h1 { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: clamp(44px, 9vw, 76px); line-height: 1; letter-spacing: -1px; text-transform: uppercase; }
+  .tag { margin-top: 6px; font-family: 'Oswald', sans-serif; font-weight: 600; letter-spacing: 4px; text-transform: uppercase; color: var(--yellow); font-size: clamp(15px, 2.6vw, 20px); }
+  .lead { margin-top: 26px; font-size: clamp(18px, 2.6vw, 22px); line-height: 1.5; color: #dbe1f2; max-width: 680px; }
+  .facts { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; padding: 0; list-style: none; }
+  .facts li { padding: 8px 16px; border-radius: 999px; background: #ffffff10; border: 1px solid #ffffff1f; font-size: 15px; color: #e7ebf7; }
+  .get { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 36px; }
+  .card { display: flex; flex-direction: column; gap: 14px; padding: 22px; border-radius: 24px; background: var(--panel); border: 1px solid var(--line); }
+  .card.mine { border-color: var(--yellow); box-shadow: 0 0 0 2px #ffd23f33, 0 20px 50px #00000066; }
+  .card h2 { display: flex; align-items: center; gap: 10px; font-size: 20px; }
+  .card h2 small { margin-left: auto; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #1d1430; background: var(--yellow); padding: 4px 10px; border-radius: 999px; display: none; }
+  .card.mine h2 small { display: inline-block; }
+  .card p { color: var(--muted); line-height: 1.45; font-size: 15px; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 54px; padding: 12px 18px; border-radius: 16px; text-decoration: none;
+    font-weight: 700; font-size: 17px; color: #0f1322; background: #dfe6ff; transition: transform .15s ease, filter .15s ease; }
+  .btn:hover { filter: brightness(1.05); transform: translateY(-1px); }
+  .btn:focus-visible { outline: 3px solid var(--yellow); outline-offset: 3px; }
+  .btn.android { background: var(--green); }
+  .btn.ios { background: #ffffff; }
+  .btn.lite { background: transparent; color: var(--text); border: 1px solid var(--line); min-height: 46px; font-size: 15px; }
+  .meta { font-size: 13px; color: var(--muted); text-align: center; }
+  ol { margin: 0; padding-left: 20px; color: #dbe1f2; line-height: 1.55; font-size: 15px; }
+  .web { margin-top: 22px; text-align: center; }
+  .web a { color: var(--text); font-weight: 500; }
+  footer { margin-top: 40px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 14px; }
+  footer a { color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
+</style>
+</head>
+<body>
+<div class="glow" aria-hidden="true"></div>
+<main>
+  <header>
+    <img src="icon-192.png" alt="" width="84" height="84">
+    <div>
+      <h1>LifeQuest</h1>
+      <p class="tag">Прокачуй своє життя</p>
+    </div>
+  </header>
+  <p class="lead">Перетвори щоденні справи на квести: виконуй завдання, отримуй досвід, підвищуй рівень і обирай свій світ.</p>
+  <ul class="facts">
+    <li>Квести й підзавдання</li><li>Досвід і рівні</li><li>Шість світів</li><li>Музика й живі фони</li><li>Без інтернету</li>
+  </ul>
+
+  <section class="get" aria-label="Завантаження">
+    <article class="card" id="card-android">
+      <h2>🤖 Android <small>Твій телефон</small></h2>
+      <a class="btn android" id="apk" href="https://github.com/Andriy440/LifeQuest/releases/latest">Завантажити APK</a>
+      <p class="meta" id="apk-meta">Android 8.0 або новіше</p>
+      <a class="btn lite" id="apk-lite" href="https://github.com/Andriy440/LifeQuest/releases/latest">LifeQuest Lite — для слабших телефонів</a>
+      <ol>
+        <li>Відкрий завантажений файл.</li>
+        <li>Дозволь встановлення з цього джерела, якщо телефон запитає.</li>
+      </ol>
+    </article>
+    <article class="card" id="card-ios">
+      <h2>🍏 iPhone та iPad <small>Твій телефон</small></h2>
+      <a class="btn ios" id="ios" href="./app/">Відкрити LifeQuest</a>
+      <p class="meta">Без App Store · iOS 16.4 або новіше</p>
+      <ol>
+        <li>Відкрий цю сторінку в <b>Safari</b> і натисни «Відкрити LifeQuest».</li>
+        <li>Натисни <b>«Поділитися»</b> ⬆︎ внизу екрана.</li>
+        <li>Обери <b>«На початковий екран»</b> → «Додати».</li>
+      </ol>
+      <p>LifeQuest з'явиться на екрані з іконкою й працюватиме без інтернету.</p>
+    </article>
+  </section>
+
+  <p class="web">На комп'ютері? <a href="./app/">Відкрити LifeQuest у браузері</a></p>
+
+  <footer>
+    <span id="version">Команда Error404 · ВР-12</span>
+    <a href="https://github.com/Andriy440/LifeQuest">Код і всі версії на GitHub</a>
+  </footer>
+</main>
+<script>
+  // Highlights the right card for this phone, and points the Android buttons at the newest release's APKs.
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const android = /Android/i.test(navigator.userAgent);
+  const mine = document.getElementById(ios ? 'card-ios' : android ? 'card-android' : '');
+  if (mine) { mine.classList.add('mine'); mine.parentElement.prepend(mine); }
+  const size = bytes => (bytes / 1e6).toFixed(1).replace('.', ',') + ' МБ';
+  fetch('https://api.github.com/repos/Andriy440/LifeQuest/releases/latest', { headers: { Accept: 'application/vnd.github+json' } })
+    .then(response => response.ok ? response.json() : Promise.reject(new Error(String(response.status))))
+    .then(release => {
+      const apks = (release.assets || []).filter(asset => /\.apk$/i.test(asset.name));
+      const full = apks.find(asset => !/lite/i.test(asset.name));
+      const lite = apks.find(asset => /lite/i.test(asset.name));
+      if (full) {
+        const button = document.getElementById('apk');
+        button.href = full.browser_download_url;
+        button.textContent = 'Завантажити APK · ' + size(full.size);
+      }
+      if (lite) {
+        const button = document.getElementById('apk-lite');
+        button.href = lite.browser_download_url;
+        button.textContent = 'LifeQuest Lite · ' + size(lite.size) + ' — для слабших телефонів';
+      }
+      document.getElementById('apk-meta').textContent = 'Версія ' + release.tag_name + ' · Android 8.0 або новіше';
+      document.getElementById('version').textContent = 'LifeQuest ' + release.tag_name + ' · Команда Error404 · ВР-12';
+    })
+    .catch(() => { /* the buttons keep pointing at the releases page */ });
+</script>
+</body>
+</html>
