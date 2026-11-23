@@ -19,6 +19,7 @@
   .glow { position: fixed; inset: 0; pointer-events: none; z-index: 0;
     background: radial-gradient(600px 420px at 12% 8%, #3d548e66, transparent 70%), radial-gradient(520px 420px at 92% 18%, #6b3fa055, transparent 70%),
       radial-gradient(700px 500px at 60% 110%, #c2306d33, transparent 70%); }
+  .bg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
   main { position: relative; z-index: 1; width: min(960px, 100%); margin: 0 auto;
     padding: max(32px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(40px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
   header { display: flex; align-items: center; gap: 18px; margin-top: 12px; }
@@ -53,6 +54,7 @@
 </head>
 <body>
 <div class="glow" aria-hidden="true"></div>
+<canvas class="bg" id="bg" aria-hidden="true"></canvas>
 <main>
   <header>
     <img src="icon-192.png" alt="" width="84" height="84">
@@ -98,6 +100,102 @@
   </footer>
 </main>
 <script>
+  // The interactive background: lights in LifeQuest's colours (and a few ★ +XP ✓) drift and link up like a
+  // constellation; they make way for a finger or the pointer, which reaches out to them with light lines, and a
+  // tap throws sparks and a "+XP". Still when the phone asks for less motion; paused in a hidden tab.
+  (() => {
+    const canvas = document.getElementById('bg');
+    const ctx = canvas.getContext('2d');
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const colors = ['#ffd23f', '#ff8fbf', '#91f5b6', '#82dff8', '#b5c6ff'];
+    const glyphs = ['★', '+XP', '✓', '◆', '+25', '+50', '+100'];
+    const LINK = 130, REACH = 170, PUSH = 140;
+    const pointer = { x: -1e4, y: -1e4, on: false };
+    let w = 0, h = 0, dots = [], sparks = [], texts = [], last = 0, frameId = 0;
+    const dot = () => ({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - .5) * .3, vy: (Math.random() - .5) * .3,
+      r: 1.3 + Math.random() * 2.2, c: colors[Math.random() * colors.length | 0],
+      g: Math.random() < .16 ? glyphs[Math.random() * glyphs.length | 0] : null, lit: 0 });
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = innerWidth; h = innerHeight;
+      canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const count = Math.round(Math.min(95, Math.max(38, w * h / 15000)));
+      dots = Array.from({ length: count }, (_, i) => dots[i] || dot());
+      if (still) draw();
+    }
+    function burst(x, y) {
+      for (let i = 0; i < 16; i++) {
+        const a = Math.random() * Math.PI * 2, v = 1.5 + Math.random() * 3.5;
+        sparks.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 1.2, life: 1, c: colors[i % colors.length], r: 1.5 + Math.random() * 2 });
+      }
+      texts.push({ x, y, life: 1, t: Math.random() < 1 / 3 ? '★' : '+XP' });
+      for (const d of dots) {
+        const dx = d.x - x, dy = d.y - y, dist = Math.hypot(dx, dy) || 1;
+        if (dist < 220) { d.vx += dx / dist * 2.2 * (1 - dist / 220); d.vy += dy / dist * 2.2 * (1 - dist / 220); d.lit = 1; }
+      }
+    }
+    function step(dt) {
+      for (const d of dots) {
+        const dx = d.x - pointer.x, dy = d.y - pointer.y, dist = Math.hypot(dx, dy) || 1;
+        if (pointer.on && dist < PUSH) { const f = (1 - dist / PUSH) * .9; d.vx += dx / dist * f; d.vy += dy / dist * f; d.lit = Math.max(d.lit, 1 - dist / PUSH); }
+        d.vx *= .96; d.vy *= .96;
+        const speed = Math.hypot(d.vx, d.vy);
+        if (speed < .12) { d.vx += (Math.random() - .5) * .04; d.vy += (Math.random() - .5) * .04; }
+        d.x += d.vx * dt; d.y += d.vy * dt; d.lit *= .97;
+        if (d.x < -20) d.x = w + 20; else if (d.x > w + 20) d.x = -20;
+        if (d.y < -20) d.y = h + 20; else if (d.y > h + 20) d.y = -20;
+      }
+      for (const s of sparks) { s.x += s.vx * dt; s.y += s.vy * dt; s.vy += .06 * dt; s.vx *= .985; s.life -= .018 * dt; }
+      for (const t of texts) { t.y -= .7 * dt; t.life -= .014 * dt; }
+      sparks = sparks.filter(s => s.life > 0); texts = texts.filter(t => t.life > 0);
+    }
+    function draw() {
+      ctx.clearRect(0, 0, w, h);
+      ctx.lineWidth = 1;
+      for (let i = 0; i < dots.length; i++) for (let j = i + 1; j < dots.length; j++) {
+        const a = dots[i], b = dots[j], dx = a.x - b.x, dy = a.y - b.y, d2 = dx * dx + dy * dy;
+        if (d2 > LINK * LINK) continue;
+        ctx.strokeStyle = `rgba(181, 198, 255, ${(1 - Math.sqrt(d2) / LINK) * .16})`;
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      }
+      if (pointer.on) for (const d of dots) {
+        const dist = Math.hypot(d.x - pointer.x, d.y - pointer.y);
+        if (dist > REACH) continue;
+        ctx.strokeStyle = `rgba(255, 210, 63, ${(1 - dist / REACH) * .35})`;
+        ctx.beginPath(); ctx.moveTo(pointer.x, pointer.y); ctx.lineTo(d.x, d.y); ctx.stroke();
+      }
+      for (const d of dots) {
+        ctx.globalAlpha = .55 + d.lit * .45;
+        ctx.fillStyle = d.c;
+        if (d.g) { ctx.font = `700 ${12 + d.r * 2}px Rubik, system-ui, sans-serif`; ctx.fillText(d.g, d.x, d.y); }
+        else { ctx.shadowColor = d.c; ctx.shadowBlur = 8 + d.lit * 14; ctx.beginPath(); ctx.arc(d.x, d.y, d.r + d.lit * 1.5, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; }
+      }
+      for (const s of sparks) { ctx.globalAlpha = Math.max(0, s.life); ctx.fillStyle = s.c; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill(); }
+      ctx.font = "700 22px Oswald, Rubik, sans-serif"; ctx.textAlign = 'center';
+      for (const t of texts) { ctx.globalAlpha = Math.max(0, t.life); ctx.fillStyle = '#ffd23f'; ctx.fillText(t.t, t.x, t.y - 14); }
+      ctx.textAlign = 'start'; ctx.globalAlpha = 1;
+    }
+    function frame(now) {
+      const dt = Math.min(3, (now - (last || now)) / 16.7); last = now;
+      step(dt); draw();
+      frameId = requestAnimationFrame(frame);
+    }
+    resize();
+    addEventListener('resize', resize);
+    if (still) return;
+    addEventListener('pointermove', e => { pointer.x = e.clientX; pointer.y = e.clientY; pointer.on = true; }, { passive: true });
+    addEventListener('pointerdown', e => { pointer.x = e.clientX; pointer.y = e.clientY; pointer.on = true; burst(e.clientX, e.clientY); }, { passive: true });
+    addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') pointer.on = false; }, { passive: true });
+    addEventListener('pointercancel', () => { pointer.on = false; }, { passive: true });
+    document.addEventListener('pointerleave', () => { pointer.on = false; });
+    document.addEventListener('visibilitychange', () => {
+      cancelAnimationFrame(frameId); last = 0;
+      if (!document.hidden) frameId = requestAnimationFrame(frame);
+    });
+    frameId = requestAnimationFrame(frame);
+  })();
+
   // Highlights the right card for this phone, and points the Android buttons at the newest release's APKs.
   const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const android = /Android/i.test(navigator.userAgent);
