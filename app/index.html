@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="uk">
 <head>
-<meta charset="utf-8"><meta name="lifequest-build" content="34317cc5305f317a"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta charset="utf-8"><meta name="lifequest-build" content="053484656c2f4059"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <script>
   window.lifeQuestUpdateInsets = top => document.documentElement.style.setProperty('--android-safe-top', Math.max(0, Number(top) || 0) + 'px');
   if (window.LifeQuestAndroid?.safeTopInset) window.lifeQuestUpdateInsets(window.LifeQuestAndroid.safeTopInset());
@@ -1495,23 +1495,34 @@ dialog:has(.group-editor) {
   padding: 0;
   border-color: transparent;
   color: var(--button-text);
-  background:
-    linear-gradient(color-mix(in srgb, var(--button-text) 26%, transparent), color-mix(in srgb, var(--button-text) 26%, transparent))
-      no-repeat 0 100% / 100% calc(var(--update-progress, 0) * 100%),
-    var(--purple);
+  background: var(--purple);
   box-shadow: 0 4px 14px color-mix(in srgb, var(--purple) 32%, transparent);
-  transition: background-size 220ms linear, filter 160ms ease;
+  transition: filter 160ms ease;
 }
 .topbar #update-btn[hidden] { display: none; }
 .topbar #update-btn:hover { border-color: transparent; filter: brightness(1.06); }
 .topbar #update-btn:disabled { cursor: progress; opacity: 1; }
 .topbar #update-btn .icon { width: 19px; height: 19px; stroke-width: 2; }
+.topbar #update-btn .update-ring {
+  display: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: conic-gradient(currentColor calc(var(--update-progress, 0) * 1turn), color-mix(in srgb, currentColor 26%, transparent) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px));
+}
+.topbar #update-btn.is-busy .icon { display: none; }
+.topbar #update-btn.is-busy .update-ring { display: block; }
+.topbar #update-btn.is-installing .update-ring {
+  background: conic-gradient(currentColor .3turn, color-mix(in srgb, currentColor 26%, transparent) 0);
+  animation: update-turn 900ms linear infinite;
+}
 .topbar #update-btn.is-new { animation: update-arrive 420ms cubic-bezier(.2,.8,.2,1.2) both; }
-.topbar #update-btn.is-busy .icon { animation: update-busy 1.1s ease-in-out infinite; }
-body.reduce-motion .topbar #update-btn.is-new, body.reduce-motion .topbar #update-btn.is-busy .icon { animation: none; }
-@media (prefers-reduced-motion: reduce) { .topbar #update-btn.is-new, .topbar #update-btn.is-busy .icon { animation: none; } }
+body.reduce-motion .topbar #update-btn.is-new, body.reduce-motion .topbar #update-btn .update-ring { animation: none; }
+@media (prefers-reduced-motion: reduce) { .topbar #update-btn.is-new, .topbar #update-btn .update-ring { animation: none; } }
 @keyframes update-arrive { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
-@keyframes update-busy { 50% { transform: translateY(2px); } }
+@keyframes update-turn { to { transform: rotate(1turn); } }
 
 .update-check { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 4px 0 14px; }
 .update-check .form-note { margin: 0; flex: 1 1 180px; }
@@ -6112,7 +6123,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   </a>
   <div class="topbar-actions">
     <button class="icon-button" id="color-mode-btn" type="button" aria-label="Темний режим" aria-pressed="false"><span data-mode-icon></span></button>
-    <button class="icon-button update-button" id="update-btn" type="button" hidden aria-label="Оновити LifeQuest до нової версії"><i data-icon="download"></i></button>
+    <button class="icon-button update-button" id="update-btn" type="button" hidden aria-label="Оновити LifeQuest до нової версії"><i data-icon="download"></i><span class="update-ring" aria-hidden="true"></span></button>
     <button class="icon-button" id="settings-btn" aria-label="Налаштування"><span data-world-icon="settings"></span></button>
     <button class="icon-button" id="achievements-btn" aria-label="Досягнення"><span data-world-icon="award"></span></button>
   </div>
@@ -14003,7 +14014,8 @@ function initAppUpdate() {
     const busy = BUSY.has(state);
     button.disabled = busy;
     button.classList.toggle('is-busy', busy);
-    button.style.setProperty('--update-progress', state === 'downloading' ? String(Math.max(0.06, progress || 0)) : busy ? '1' : '0');
+    button.classList.toggle('is-installing', state === 'installing');
+    button.style.setProperty('--update-progress', state === 'downloading' ? String(Math.max(0.04, progress || 0)) : busy ? '1' : '0');
     const name = describe(current);
     button.setAttribute('aria-label', name);
     button.title = name;
