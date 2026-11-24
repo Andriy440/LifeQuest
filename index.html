@@ -197,7 +197,8 @@
   const android = /Android/i.test(navigator.userAgent);
   const mine = document.getElementById(ios ? 'card-ios' : android ? 'card-android' : '');
   if (mine) { mine.classList.add('mine'); mine.parentElement.prepend(mine); }
-  const size = bytes => (bytes / 1e6).toFixed(1).replace('.', ',') + ' МБ';
+  // Sizes as GitHub lists the files (binary units): 3,02 МБ, 900 КБ.
+  const size = bytes => bytes >= 1048576 ? (bytes / 1048576).toFixed(2).replace('.', ',') + ' МБ' : Math.round(bytes / 1024) + ' КБ';
   fetch('https://api.github.com/repos/Andriy440/LifeQuest/releases/latest', { headers: { Accept: 'application/vnd.github+json' } })
     .then(response => response.ok ? response.json() : Promise.reject(new Error(String(response.status))))
     .then(release => {
