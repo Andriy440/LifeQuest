@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="uk">
 <head>
-<meta charset="utf-8"><meta name="lifequest-build" content="db64f6cd5a0546d1"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta charset="utf-8"><meta name="lifequest-build" content="34317cc5305f317a"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <script>
   window.lifeQuestUpdateInsets = top => document.documentElement.style.setProperty('--android-safe-top', Math.max(0, Number(top) || 0) + 'px');
   if (window.LifeQuestAndroid?.safeTopInset) window.lifeQuestUpdateInsets(window.LifeQuestAndroid.safeTopInset());
@@ -1512,6 +1512,11 @@ body.reduce-motion .topbar #update-btn.is-new, body.reduce-motion .topbar #updat
 @media (prefers-reduced-motion: reduce) { .topbar #update-btn.is-new, .topbar #update-btn.is-busy .icon { animation: none; } }
 @keyframes update-arrive { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
 @keyframes update-busy { 50% { transform: translateY(2px); } }
+
+.update-check { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 4px 0 14px; }
+.update-check .form-note { margin: 0; flex: 1 1 180px; }
+.update-check .form-note:empty { display: none; }
+.update-check button { flex: none; min-height: 44px; }
 .brand {
   min-width: 0;
   display: inline-flex;
@@ -7886,6 +7891,12 @@ const PHRASES = [
 ["Усі розділи застосунку крок за кроком", "Every part of the app, step by step", "逐步了解应用的每个部分"],
 ["Музика", "Music", "音乐"],
 ["Кольори, шрифти, світлий і темний режим", "Colours, fonts, light and dark mode", "颜色、字体、浅色与深色模式"],
+["Перевірити оновлення", "Check for updates", "检查更新"],
+["Перевіряю…", "Checking…", "正在检查…"],
+["У тебе остання версія.", "You have the latest version.", "已是最新版本。"],
+["Не вдалося перевірити: немає зв’язку з GitHub.", "Couldn’t check: no connection to GitHub.", "无法检查：无法连接 GitHub。"],
+["Доступна версія {0}.", "Version {0} is available.", "有新版本 {0}。"],
+["Оновити до {0}", "Update to {0}", "更新到 {0}"],
 ];
 
 return { PHRASES };
@@ -13959,15 +13970,18 @@ return { SWATCHES, hslToHex, hexToHsl, closePicker, installPickers };
 })();
 __lifequestModules["app-update.js"] = (function () {
 
-const WEB_CHECK_EVERY = 30 * 60 * 1000;
+const WEB_CHECK_EVERY = 60 * 1000;
+const CHECK_TIMEOUT = 20000;
 
 const BUSY = new Set(['downloading', 'installing']);
+const idle = { available: false, checkNow: async () => ({ state: 'none', ok: false }), install() {}, current: () => ({ state: 'none' }) };
 
 function initAppUpdate() {
   const button = document.getElementById('update-btn');
-  if (!button) return;
+  if (!button) return idle;
   const android = globalThis.LifeQuestAndroid;
   let current = { state: 'none' };
+  let waiting = [];
 
   function describe({ state, version, progress }) {
     if (state === 'downloading') return 'Завантаження оновлення: ' + Math.round((progress || 0) * 100) + '%';
@@ -13982,6 +13996,9 @@ function initAppUpdate() {
     const visible = state !== 'none';
     if (visible && button.hidden) button.classList.add('is-new');
     button.hidden = !visible;
+    const answered = waiting;
+    waiting = [];
+    for (const resolve of answered) resolve(current);
     if (!visible) return;
     const busy = BUSY.has(state);
     button.disabled = busy;
@@ -13993,40 +14010,59 @@ function initAppUpdate() {
   }
   button.addEventListener('animationend', event => { if (event.animationName === 'update-arrive') button.classList.remove('is-new'); });
 
+  const answer = () => new Promise(resolve => {
+    waiting.push(resolve);
+    setTimeout(() => { const at = waiting.indexOf(resolve); if (at >= 0) { waiting.splice(at, 1); resolve({ ...current, ok: false }); } }, CHECK_TIMEOUT);
+  });
+
   if (android && typeof android.checkForUpdate === 'function') {
     window.lifeQuestUpdateState = show;
     try { show(JSON.parse(android.updateState())); } catch { show(null); }
     const check = () => { try { android.checkForUpdate(); } catch { /* an older app without updates */ } };
     check();
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
-    button.addEventListener('click', () => {
-      if (BUSY.has(current.state)) return;
+    const install = () => {
+      if (BUSY.has(current.state) || current.state === 'none') return;
       show({ ...current, state: 'downloading', progress: 0 });
       try { android.installUpdate(); } catch { show({ ...current, state: 'failed' }); }
-    });
-    return;
+    };
+    button.addEventListener('click', install);
+    return {
+      available: true, install, current: () => current,
+      checkNow() {
+        const result = answer();
+        try { (android.checkForUpdateNow || android.checkForUpdate).call(android); } catch { show({ ...current, ok: false }); }
+        return result;
+      },
+    };
   }
 
   const build = document.querySelector('meta[name="lifequest-build"]')?.content;
   const online = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-  if (!build || !online || window.top !== window) return;
+  if (!build || !online || window.top !== window) return idle;
   let checkedAt = 0;
-  async function checkWeb() {
-    if (Date.now() - checkedAt < WEB_CHECK_EVERY || current.state !== 'none') return;
+  async function checkWeb(force = false) {
+    if (!force && (Date.now() - checkedAt < WEB_CHECK_EVERY || current.state !== 'none')) return current;
     checkedAt = Date.now();
     try {
       const response = await fetch('version.json', { cache: 'no-store' });
-      if (!response.ok) return;
+      if (!response.ok) throw new Error(String(response.status));
       const latest = await response.json();
-      if (latest?.build && latest.build !== build) show({ state: 'available', version: latest.version });
-    } catch { /* offline: try again later */ }
+      const newer = !!latest?.build && latest.build !== build;
+      show(newer ? { state: 'available', version: latest.version, latest: latest.version, ok: true } : { state: 'none', latest: latest?.version || '', ok: true });
+    } catch {
+      show({ ...current, ok: false });
+    }
+    return current;
   }
   setTimeout(checkWeb, 4000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkWeb(); });
-  button.addEventListener('click', () => {
+  const install = () => {
     show({ ...current, state: 'installing' });
     location.reload();
-  });
+  };
+  button.addEventListener('click', install);
+  return { available: true, install, current: () => current, checkNow: () => checkWeb(true) };
 }
 
 return { initAppUpdate };
@@ -16652,7 +16688,7 @@ document.addEventListener('click', event => {
   if (link) expansion.openTool(link.dataset.tool, link.dataset.toolArg || undefined);
 });
 icons();
-initAppUpdate();
+const updates = initAppUpdate();
 const KEY='lifequest-v1';let state,needsMigration=false,view='all',filter='active',toastTimer,errorUntil=0,questSearch='',questSort='newest',detailTaskId=null,renderedDay=null;
 let onlyToday = false;
 let hadSave = false;
@@ -17716,6 +17752,7 @@ function exportBackup(){
 function openProjectInfo() {
   openModal(`<header class="project-signature"><span class="crest-visual" role="img" aria-label="Емблема LifeQuest"></span><div><h2>Інформація</h2>
     <p class="subtitle"><strong>Команда Error404</strong><br>Група ВР-12 · 2026 рік<br>Версія 2.9.9</p></div></header>
+    ${updates.available ? '<div class="update-check"><p class="form-note" id="update-status" role="status"></p><button type="button" class="secondary-button" id="update-check">Перевірити оновлення</button></div>' : ''}
     <h3 class="project-team-heading">Розробники</h3>
     <ul class="project-team">
       <li><strong>Капарник Андрій</strong><span>Backend Software Engineer</span></li>
@@ -17728,6 +17765,27 @@ function openProjectInfo() {
     <p class="form-note">Шрифти DejaVu, IBM Plex Mono і PT Serif — за їхніми вільними ліцензіями.</p>
     ${LITE ? '' : `<p class="form-note">Частину текстів, зображень і звуків узято з scp-wiki.wikidot.com і гри SCP – Containment Breach за ліцензією CC BY-SA 3.0 (автори — на сторінках джерел). Ці частини LifeQuest поширюються за тією ж ліцензією.</p>`}
     <button class="secondary-button wide" id="project-info-back">До налаштувань</button>`, 'УНІВЕРСИТЕТСЬКИЙ ПРОЄКТ');
+  const updateStatus = $('#update-status'), updateCheck = $('#update-check');
+  const showUpdate = (found, asked) => {
+    if (!updateStatus) return;
+    const newer = found.state && found.state !== 'none';
+    updateCheck.dataset.mode = newer ? 'install' : 'check';
+    updateCheck.textContent = newer ? 'Оновити до ' + found.version : 'Перевірити оновлення';
+    updateStatus.textContent = newer ? 'Доступна версія ' + found.version + '.'
+      : found.ok === false && asked ? 'Не вдалося перевірити: немає зв’язку з GitHub.'
+      : found.latest && found.ok !== false ? 'У тебе остання версія.' : '';
+  };
+  if (updateCheck) {
+    showUpdate(updates.current(), false);
+    updateCheck.addEventListener('click', async () => {
+      if (updateCheck.dataset.mode === 'install') { closeModal(); updates.install(); return; }
+      updateCheck.disabled = true;
+      updateStatus.textContent = 'Перевіряю…';
+      const found = await updates.checkNow();
+      updateCheck.disabled = false;
+      if (updateCheck.isConnected) showUpdate(found, true);
+    });
+  }
   $('#project-info-back').addEventListener('click', () => {
     openSettings();
     $('#project-info-btn').focus();
